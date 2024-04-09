@@ -120,23 +120,67 @@ bool q_delete_mid(struct list_head *head)
 /* Delete all nodes that have duplicate string */
 bool q_delete_dup(struct list_head *head)
 {
-    // https://leetcode.com/problems/remove-duplicates-from-sorted-list-ii/
+    if (!head)
+        return false;
+    bool dup = false;
+    element_t *prev, *current;
+    list_for_each_entry_safe (current, prev, head, list) {
+        bool equal = prev && !strcmp(prev->value, current->value);
+        if (equal || dup) {
+            list_del(&prev->list);
+            q_release_element(prev);
+            dup = equal;
+        }
+        prev = current;
+    }
+    if (dup) {
+        list_del(&prev->list);
+        q_release_element(prev);
+    }
     return true;
 }
 
 /* Swap every two adjacent nodes */
 void q_swap(struct list_head *head)
 {
-    // https://leetcode.com/problems/swap-nodes-in-pairs/
+    if (!head)
+        return;
+    struct list_head *node;
+    list_for_each (node, head) {
+        if (node->next == head)
+            break;
+        list_move(node, node->next);
+    }
 }
 
 /* Reverse elements in queue */
-void q_reverse(struct list_head *head) {}
+void q_reverse(struct list_head *head)
+{
+    if (!head || list_empty(head))
+        return;
+    struct list_head *node, *safe;
+    list_for_each_safe (node, safe, head)
+        list_move(node, head);
+}
 
 /* Reverse the nodes of the list k at a time */
 void q_reverseK(struct list_head *head, int k)
 {
     // https://leetcode.com/problems/reverse-nodes-in-k-group/
+    if (!head || list_empty(head))
+        return;
+    struct list_head *node = head->next;
+    for (;;) {
+        struct list_head *safe = node, *start = node->prev;
+        for (int i = 0; i < k; i++, node = node->next) {
+            if (node == head)
+                return;
+        }
+        node = safe;
+        safe = node->next;
+        for (int i = 0; i < k; i++, node = safe, safe = safe->next)
+            list_move(node, start);
+    }
 }
 
 /* Sort elements of queue in ascending/descending order */
