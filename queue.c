@@ -7,15 +7,45 @@
 /* Create an empty queue */
 struct list_head *q_new()
 {
-    return NULL;
+    struct list_head *new = malloc(sizeof(struct list_head));
+    if (!new)
+        return NULL;
+    INIT_LIST_HEAD(new);
+    return new;
 }
 
 /* Free all storage used by queue */
-void q_free(struct list_head *head) {}
+void q_free(struct list_head *head)
+{
+    if (!head)
+        return;
+    struct list_head *node, *safe;
+    list_for_each_safe(node, safe, head) {
+        element_t *elem = list_entry(node, element_t, list);
+        free(elem->value);
+        free(elem);
+    }
+    free(head);
+}
 
 /* Insert an element at head of queue */
+/* cppcheck-suppress constParameterPointer */
 bool q_insert_head(struct list_head *head, char *s)
 {
+    if (!head)
+        return false;
+    element_t *elem = malloc(sizeof(element_t));
+    if (!elem)
+        return false;
+
+    elem->value = strdup(s);
+    if (!elem->value) {
+        free(elem);
+        return false;
+    }
+
+    list_add(&elem->list, head);
+    /* cppcheck-suppress memleak */
     return true;
 }
 
@@ -26,9 +56,18 @@ bool q_insert_tail(struct list_head *head, char *s)
 }
 
 /* Remove an element from head of queue */
+/* cppcheck-suppress constParameterPointer */
 element_t *q_remove_head(struct list_head *head, char *sp, size_t bufsize)
 {
-    return NULL;
+    if (!head || list_empty(head))
+        return NULL;
+
+    element_t *elem = list_first_entry(head, element_t, list);
+    if (sp && (elem->value)) {
+        *(char *) stpncpy(sp, elem->value, bufsize - 1) = '\0';
+    }
+    list_del(&elem->list);
+    return elem;
 }
 
 /* Remove an element from tail of queue */
