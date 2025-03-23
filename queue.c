@@ -5,6 +5,8 @@
 
 #include "queue.h"
 
+#define unlikely(x) __builtin_expect(!!(x), 0)
+
 /* Create an empty queue */
 struct list_head *q_new()
 {
@@ -154,16 +156,15 @@ void q_reverse(struct list_head *head)
 {
     if (!head || list_empty(head))
         return;
-    struct list_head *safe, *node;
-    list_for_each_safe(node, safe, head) {
+    struct list_head *node = head;
+    struct list_head *next;
+    do {
+        next = node->next;
         *(uintptr_t *) &node->prev ^= (uintptr_t) node->next;
         *(uintptr_t *) &node->next ^= (uintptr_t) node->prev;
         *(uintptr_t *) &node->prev ^= (uintptr_t) node->next;
-    }
-    *(uintptr_t *) &head->prev ^= (uintptr_t) head->next;
-    *(uintptr_t *) &head->next ^= (uintptr_t) head->prev;
-    *(uintptr_t *) &head->prev ^= (uintptr_t) head->next;
-
+        node = next;
+    } while (node != head);
 }
 
 /* Reverse the nodes of the list k at a time */
