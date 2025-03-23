@@ -1,3 +1,4 @@
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -149,7 +150,21 @@ void q_swap(struct list_head *head)
 }
 
 /* Reverse elements in queue */
-void q_reverse(struct list_head *head) {}
+void q_reverse(struct list_head *head)
+{
+    if (!head || list_empty(head))
+        return;
+    struct list_head *safe, *node;
+    list_for_each_safe(node, safe, head) {
+        *(uintptr_t *) &node->prev ^= (uintptr_t) node->next;
+        *(uintptr_t *) &node->next ^= (uintptr_t) node->prev;
+        *(uintptr_t *) &node->prev ^= (uintptr_t) node->next;
+    }
+    *(uintptr_t *) &head->prev ^= (uintptr_t) head->next;
+    *(uintptr_t *) &head->next ^= (uintptr_t) head->prev;
+    *(uintptr_t *) &head->prev ^= (uintptr_t) head->next;
+
+}
 
 /* Reverse the nodes of the list k at a time */
 void q_reverseK(struct list_head *head, int k)
