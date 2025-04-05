@@ -5,6 +5,7 @@
 
 #include "queue.h"
 
+#define likely(x) __builtin_expect(!!(x), 1)
 #define unlikely(x) __builtin_expect(!!(x), 0)
 
 /* Create an empty queue */
@@ -183,9 +184,128 @@ void q_reverseK(struct list_head *head, int k)
         list_splice(&tmp, left);
     }
 }
+typedef int (*list_cmp_func_t)(struct list_head *a,
+                               struct list_head *b,
+                               bool descend);
 
-/* Sort elements of queue in ascending/descending order */
-void q_sort(struct list_head *head, bool descend) {}
+int cmp(struct list_head *a, struct list_head *b, bool descend)
+{
+    element_t const *elem_a = list_entry(a, element_t, list);
+    element_t const *elem_b = list_entry(b, element_t, list);
+    int mask = -descend;
+    return (strcmp(elem_a->value, elem_b->value) ^ mask) - mask;
+}
+
+struct list_head *merge(list_cmp_func_t cmp,
+                        struct list_head *a,
+                        struct list_head *b,
+                        bool descend)
+{
+    /* cppcheck-suppress unassignedVariable */
+    struct list_head *head, **tail = &head;
+    for (;;) {
+        if (cmp(a, b, descend) <= 0) {
+            *tail = a;
+            tail = &a->next;
+            a = a->next;
+            if (!a) {
+                *tail = b;
+                break;
+            }
+        } else {
+            *tail = b;
+            tail = &b->next;
+            b = b->next;
+            if (!b) {
+                *tail = a;
+                break;
+            }
+        }
+    }
+    return head;
+}
+
+static void merge_final(list_cmp_func_t cmp,
+                        struct list_head *head,
+                        struct list_head *a,
+                        struct list_head *b,
+                        bool descend)
+{
+    struct list_head *tail = head;
+    size_t count = 0;
+
+    for (;;) {
+        if (cmp(a, b, descend) <= 0) {
+            tail->next = a;
+            a->prev = tail;
+            tail = a;
+            a = a->next;
+            if (!a)
+                break;
+        } else {
+            tail->next = b;
+            b->prev = tail;
+            tail = b;
+            b = b->next;
+            if (!b) {
+                b = a;
+                break;
+            }
+        }
+    }
+
+    tail->next = b;
+    do {
+        if (unlikely(!++count))
+            cmp(b, b, descend);
+        b->prev = tail;
+        tail = b;
+        b = b->next;
+    } while (b);
+
+    tail->next = head;
+    head->prev = tail;
+}
+
+void q_sort(struct list_head *head, bool descend)
+{
+    if (!head || list_empty(head))
+        return;
+    struct list_head *list = head->next, *pending = NULL;
+    size_t count = 0;
+    list->prev->next = NULL;
+    do {
+        size_t bits;
+        struct list_head **tail = &pending;
+        for (bits = count; bits & 1; bits >>= 1)
+            tail = &(*tail)->prev;
+        if (likely(bits)) {
+            struct list_head *a = *tail, *b = a->prev;
+            a = merge(cmp, b, a, descend);
+            a->prev = b->prev;
+            *tail = a;
+        }
+        list->prev = pending;
+        pending = list;
+        list = list->next;
+        pending->next = NULL;
+        count++;
+    } while (list);
+    // Maybe this is because my value of head of list is empty so following step
+    // will failed(deadbeef(segmentation fault)). So we need to more to
+    // pending->prev->prev
+    list = pending->prev;
+    pending = pending->prev->prev;
+    for (;;) {
+        struct list_head *next = pending->prev;
+
+        if (!next)
+            break;
+        list = merge(cmp, pending, list, descend);
+        pending = next;
+    }
+    merge_final(cmp, head, pending, list, descend);
+}
 
 /* Remove every node which has a node with a strictly less value anywhere to
  * the right side of it */
