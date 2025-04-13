@@ -276,7 +276,8 @@ void q_sort(struct list_head *head, bool descend)
         return;
     struct list_head *list = head->next, *pending = NULL;
     size_t count = 0;
-    list->prev->next = NULL;
+
+    head->prev->next = NULL;
     do {
         size_t bits;
         struct list_head **tail = &pending;
@@ -294,11 +295,9 @@ void q_sort(struct list_head *head, bool descend)
         pending->next = NULL;
         count++;
     } while (list);
-    // Maybe this is because my value of head of list is empty so following step
-    // will failed(deadbeef(segmentation fault)). So we need to more to
-    // pending->prev->prev
-    list = pending->prev;
-    pending = pending->prev->prev;
+
+    list = pending;
+    pending = pending->prev;
     for (;;) {
         struct list_head *next = pending->prev;
 
