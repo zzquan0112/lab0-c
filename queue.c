@@ -314,16 +314,47 @@ void q_sort(struct list_head *head, bool descend)
  * the right side of it */
 int q_ascend(struct list_head *head)
 {
-    // https://leetcode.com/problems/remove-nodes-from-linked-list/
-    return 0;
+    if (!head || list_empty(head))
+        return 0;
+    struct list_head *safe, *node;
+    const char *greatest = NULL;
+    for (node = head->prev, safe = node->prev; node != head;
+         node = safe, safe = node->prev) {
+        element_t *entry = list_entry(node, element_t, list);
+        if (!greatest || (strcmp(entry->value, greatest) <= 0)) {
+            greatest = entry->value;
+            continue;
+        }
+        list_del(&entry->list);
+        if (entry->value)
+            free(entry->value);
+        free(entry);
+    }
+    return q_size(head);
 }
 
 /* Remove every node which has a node with a strictly greater value anywhere to
  * the right side of it */
 int q_descend(struct list_head *head)
 {
-    // https://leetcode.com/problems/remove-nodes-from-linked-list/
-    return 0;
+    if (!head || list_empty(head))
+        return 0;
+    struct list_head *safe, *node;
+    const char *greatest = NULL;
+    for (node = head->prev, safe = node->prev; node != head;
+         node = safe, safe = node->prev) {
+        element_t *entry = list_entry(node, element_t, list);
+
+        if (!greatest || (strcmp(entry->value, greatest) >= 0)) {
+            greatest = entry->value;
+            continue;
+        }
+        list_del(&entry->list);
+        if (entry->value)
+            free(entry->value);
+        free(entry);
+    }
+    return q_size(head);
 }
 
 /* Merge all the queues into one sorted queue, which is in ascending/descending
