@@ -272,7 +272,7 @@ static void merge_final(list_cmp_func_t cmp,
 
 void q_sort(struct list_head *head, bool descend)
 {
-    if (!head || list_empty(head))
+    if (!head || list_empty(head) || list_is_singular(head))
         return;
     struct list_head *list = head->next, *pending = NULL;
     size_t count = 0;
